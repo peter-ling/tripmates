@@ -1,0 +1,623 @@
+<style>
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      margin: 10px;
+    }
+  
+    .grid-item {
+      border: 1px solid #ccc;
+      padding: 20px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+  
+    .grid-title {
+      font-weight: bold;
+      font-size: 18px;
+    }
+  
+    .grid-subtitle {
+      font-size: 14px;
+      color: #666;
+    }
+  
+    .grid-button {
+      display: inline-block;
+      background-color: #e9724c;
+      color: #fff;
+      padding: 6px 12px;
+      text-decoration: none;
+      border-radius: 30px;
+      position: absolute; 
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 12px;
+      
+    }
+  
+    
+    .grid-like-container {
+    display: flex;
+    align-items: center;
+    }
+  
+    .grid-like-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 10px;
+      position: relative;
+      
+    }
+  
+    .grid-like-button {
+      background-color: #ffc857;
+      color: black;
+      padding: 6px 12px;
+      text-decoration: none;
+      border-radius: 30px;
+      font-size: 14px;
+      
+    }
+  
+    .grid-like-button-pressed {
+      background-color: #c5283d;
+      color: #fff;
+      padding: 6px 12px;
+      text-decoration: none;
+      border-radius: 30px;
+      font-size: 14px;
+    }
+  
+    .grid-like-count {
+      font-size: 14px;
+      color: #666;
+    }
+  </style>
+  
+  
+  <script src="
+  https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.22.0/dist/umd/supabase.min.js
+  ">import { createClient } from '@supabase/supabase-js';</script>
+  
+  
+  <script>
+    // src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@1.13.3/browser.js"
+    const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvbGJtaXZtdW5oaHh6YnZjZHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE2ODQ0NTUzNTAsImV4cCI6MjAwMDAzMTM1MH0.fruROYZ33hfVTQXVm-Rv9Lc9EkfxRF9c3i_MLKFCGXg"
+    var supabase = supabase.createClient("https://xolbmivmunhhxzbvcdun.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvbGJtaXZtdW5oaHh6YnZjZHVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE2ODQ0NTUzNTAsImV4cCI6MjAwMDAzMTM1MH0.fruROYZ33hfVTQXVm-Rv9Lc9EkfxRF9c3i_MLKFCGXg");
+  
+    async function getValue(id) {
+  
+      try {
+        const {data, error} = await supabase
+          .from('florence_info')
+          .select('num_likes')
+          .eq('id', id)
+          .single()
+  
+        if (error) {
+          console.error('Error retrieving data:', error.message);
+          return null;
+        }
+  
+        return data; 
+      } catch(error) {
+        console.error('Error:', error.message)
+        return null;
+      }
+    }
+  
+  
+    async function initLikeCounts() {
+      like_counts = await getValue(2);
+      
+      const gridElements = document.querySelectorAll('.grid-item')
+      const numGridElements = gridElements.length;
+  
+      pressed_arr = Array(numGridElements).fill(0);
+  
+      for (let i = 0; i < numGridElements; i++){
+        likes_count_obj = await getValue(i);
+        num_likes = likes_count_obj['num_likes']
+  
+        let str = "grid-like-count"; 
+        str += i.toString()
+  
+        elem = document.getElementById(str)
+        elem.textContent = num_likes
+      }
+  
+      return pressed_arr;
+    }
+    hasBeenPressed = initLikeCounts();
+  
+    document.addEventListener('DOMContentLoaded', () => {
+      const gridElements = document.querySelectorAll('.grid-item');
+      const numGridElements = gridElements.length;
+      hasBeenPressed = Array(numGridElements).fill(0)
+      
+    });
+  
+  
+    async function handleLikeButtonClick(button) {
+      
+      var likeCountElement = button.parentNode.querySelector('.grid-like-count');
+      var likeCount = parseInt(likeCountElement.textContent);
+      let button_id = button.id
+      let id_num = -1
+      if (button_id.length == "grid-like-buttonX".length){
+        id_num = parseInt(button_id.charAt(button_id.length - 1));
+      } else {
+        const lastTwoChars = button_id.slice(-2);
+        id_num = parseInt(lastTwoChars);
+        
+      }
+  
+      let curPressed = hasBeenPressed[id_num]
+  
+      if (curPressed == 0){
+        // has not been pressed yet 
+        likeCount++;
+        hasBeenPressed[id_num] = 1
+        
+        button.classList.remove("grid-like-button");
+        button.classList.add("grid-like-button-pressed");
+  
+        button.textContent = "Unendorse"
+      }
+      else {
+        // curPressed == 1, so has already been pressed
+        likeCount--; 
+        hasBeenPressed[id_num] = 0
+  
+        button.classList.add("grid-like-button");
+        button.classList.remove("grid-like-button-pressed");
+        button.textContent = "Endorse"
+      }
+  
+      // update in the backend
+      const {data, error} = await supabase
+          .from('florence_info')
+          .update({ 'num_likes': likeCount })
+          .eq('id', id_num)
+      
+      likeCountElement.textContent = likeCount;
+    
+    }
+  </script>
+  
+  <div class="grid">
+  
+  
+  <!-START NEW GRID ITEM->
+    
+    <div class="grid-item">
+      <div>
+        <div class="grid-title">Gallerie degli Uffizi</div>
+        <div class="grid-subtitle">Museum</div>
+      </div>
+      <div class="grid-description">Greatest collection of Renaissance art in Florence. Stanford students are given "amici degli Uffizi" cards that allow free access. Go as often as you can.</div>
+      <div class="grid-like-info">
+        <span class="grid-subtitle">Calvin L.</span>
+        <a href="http://www.uffizi.it/en/the-uffizi" class="grid-button">Visit Website</a>
+        <div>
+          <button class="grid-like-button" id="grid-like-button0" onclick="handleLikeButtonClick(this)">Endorse</button>
+          <span class="grid-like-count" id="grid-like-count0">0</span>
+        </div>
+      </div> 
+    </div> 
+  
+  <!-END NEW GRID ITEM->
+  
+  
+    <div class="grid-item">
+      <div>
+        <div class="grid-title">Osteria Santo Spirito</div>
+        <div class="grid-subtitle">Restaurant</div>
+      </div>
+      <div class="grid-description">Favorite lunch or dinner spot. Truffle gnocchi for less than 10 euro. Kind staff, comfy atmosphere.</div>
+      <div class="grid-like-info">
+        <span class="grid-subtitle">Calvin L.</span>
+        <a href="https://www.tripadvisor.com/Restaurant_Review-g187895-d716349-Reviews-Osteria_Santo_Spirito-Florence_Tuscany.html" class="grid-button">Visit Website</a>
+        <div>
+          <button class="grid-like-button" id="grid-like-button1" onclick="handleLikeButtonClick(this)">Endorse</button>
+          <span class="grid-like-count" id="grid-like-count1">0</span>
+        </div>
+      </div> 
+    </div> 
+    
+  
+    <div class="grid-item">
+      <div>
+        <div class="grid-title">Mercato di Sant'Ambrogio</div>
+        <div class="grid-subtitle">Site</div>
+      </div>
+      <div class="grid-description">One of the earliest modern markets in Florence. Also the last one that has not been touristified. Come to meet Italians and enjoy the atmosphere.</div>
+      <div class="grid-like-info">
+        <span class="grid-subtitle">Calvin L.</span>
+        <a href="https://www.tripadvisor.it/Attraction_Review-g187895-d195019-Reviews-Mercato_di_Sant_Ambrogio-Florence_Tuscany.html" class="grid-button">Visit Website</a>
+        <div>
+          <button class="grid-like-button" id="grid-like-button2" onclick="handleLikeButtonClick(this)">Endorse</button>
+          <span class="grid-like-count" id ="grid-like-count2">0</span>
+        </div>
+      </div> 
+    </div> 
+  
+  
+    <div class="grid-item">
+      <div>
+        <div class="grid-title">Cibrèo Caffè</div>
+        <div class="grid-subtitle">Restaurant</div>
+      </div>
+      <div class="grid-description">Tiny cafe with incredible staff. Older crowd but nice place to spend some time.</div>
+      <div class="grid-like-info">
+        <span class="grid-subtitle">Calvin L.</span>
+        <a href="https://www.cibreo.com/en/cibreo-cafe/" class="grid-button">Visit Website</a>
+        <div>
+          <button class="grid-like-button" id="grid-like-button3" onclick="handleLikeButtonClick(this)">Endorse</button>
+          <span class="grid-like-count" id="grid-like-count3">0</span>
+        </div>
+      </div> 
+    </div> 
+  
+    <div class="grid-item">
+      <div>
+        <div class="grid-title">Osteria Pastella</div>
+        <div class="grid-subtitle">Restaurant</div>
+      </div>
+      <div class="grid-description">Incredible handmade pasta restaurant in Santa Maria Novella! They make the pasta right in front of you and it's a great place to go for lunch or dinner!</div>
+      <div class="grid-like-info">
+        <span class="grid-subtitle">Haley S.</span>
+        <a href="http://www.osteriapastella.it" class="grid-button">Visit Website</a>
+        <div>
+          <button class="grid-like-button" id="grid-like-button4" onclick="handleLikeButtonClick(this)">Endorse</button>
+          <span class="grid-like-count" id="grid-like-count4">0</span>
+        </div>
+      </div> 
+    </div> 
+  
+    <div class="grid-item">
+      <div>
+        <div class="grid-title">La Giostra</div>
+        <div class="grid-subtitle">Restaurant</div>
+      </div>
+      <div class="grid-description">Nice restaurant for dinner, highly recommend the pear ravioli!</div>
+      <div class="grid-like-info">
+        <span class="grid-subtitle">Haley S., Blaire K.</span>
+        <a href="http://www.tripadvisor.com/Restaurant_Review-g187895-d716283-Reviews-La_Giostra-Florence_Tuscany.html" class="grid-button">Visit Website</a>
+        <div>
+          <button class="grid-like-button" id="grid-like-button5" onclick="handleLikeButtonClick(this)">Endorse</button>
+          <span class="grid-like-count" id="grid-like-count5">0</span>
+        </div>
+      </div> 
+    </div> 
+  
+  
+  
+    <div class="grid-item">
+      <div>
+        <div class="grid-title">Modena / Maranella</div>
+        <div class="grid-subtitle">Day Trip</div>
+      </div>
+      <div class="grid-description">Ferrari museum and Parmesan factories (need to ask them to show you around)</div>
+      <div class="grid-like-info">
+        <span class="grid-subtitle">William S.</span>
+        <a href="https://www.visitmodena.it/en/discover-modena/whats-around-modena/maranello" class="grid-button">Visit Website</a>
+        <div>
+          <button class="grid-like-button" id="grid-like-button6" onclick="handleLikeButtonClick(this)">Endorse</button>
+          <span class="grid-like-count" id="grid-like-count6">0</span>
+        </div>
+      </div> 
+    </div> 
+  
+    <div class="grid-item">
+      <div>
+        <div class="grid-title">San Miniato (Truffle Hunting)</div>
+        <div class="grid-subtitle">Day Trip</div>
+      </div>
+      <div class="grid-description">Did truffle hunting that was epic</div>
+      <div class="grid-like-info">
+        <span class="grid-subtitle">William S.</span>
+        <a href="http://trufflehunter.net" class="grid-button">Visit Website</a>
+        <div>
+          <button class="grid-like-button" id="grid-like-button7" onclick="handleLikeButtonClick(this)">Endorse</button>
+          <span class="grid-like-count" id="grid-like-count7">0</span>
+        </div>
+      </div> 
+    </div> 
+  
+  
+    <div class="grid-item">
+      <div>
+        <div class="grid-title">Palazzo Pitti</div>
+        <div class="grid-subtitle">Museum</div>
+      </div>
+      <div class="grid-description">My favorite museum in the city. Has an amazing collection of paintings and is also just beautiful in itself</div>
+      <div class="grid-like-info">
+        <span class="grid-subtitle">William S.</span>
+        <a href="https://www.uffizi.it/en/pitti-palace" class="grid-button">Visit Website</a>
+        <div>
+          <button class="grid-like-button" id="grid-like-button8" onclick="handleLikeButtonClick(this)">Endorse</button>
+          <span class="grid-like-count" id="grid-like-count8">0</span>
+        </div>
+      </div> 
+    </div> 
+  
+    <div class="grid-item">
+      <div>
+        <div class="grid-title">Trattoria Zaza</div>
+        <div class="grid-subtitle">Restaurant</div>
+      </div>
+      <div class="grid-description">Great spot to eat and drink on the cheaper side. Loved the pesto pasta. I recommend getting a reservation or going on a week night to skip the line</div>
+      <div class="grid-like-info">
+        <span class="grid-subtitle">Katie R. Bill W.</span>
+        <a href="https://www.trattoriazaza.it/" class="grid-button">Visit Website</a>
+        <div>
+          <button class="grid-like-button" id="grid-like-button9" onclick="handleLikeButtonClick(this)">Endorse</button>
+          <span class="grid-like-count" id="grid-like-count9">0</span>
+        </div>
+      </div> 
+    </div> 
+  
+  
+    <div class="grid-item">
+      <div>
+        <div class="grid-title">Lucca</div>
+        <div class="grid-subtitle">Day Trip</div>
+      </div>
+      <div class="grid-description">Beautiful smaller town around an hour away from Florence. I loved walking around the city walls, shopping in the boutiques, and climbing one of the towers that overlooks the city.</div>
+      <div class="grid-like-info">
+        <span class="grid-subtitle">Katie R.</span>
+        <a href="https://www.tripadvisor.com/Tourism-g187898-Lucca_Province_of_Lucca_Tuscany-Vacations.html" class="grid-button">Visit Website</a>
+        <div>
+          <button class="grid-like-button" id="grid-like-button10" onclick="handleLikeButtonClick(this)">Endorse</button>
+          <span class="grid-like-count" id="grid-like-count10">0</span>
+        </div>
+      </div> 
+    </div> 
+  
+    <div class="grid-item">
+      <div>
+        <div class="grid-title">Ditta Artigianale</div>
+        <div class="grid-subtitle">Restaurant</div>
+      </div>
+      <div class="grid-description">Best place to do work and drink coffee during the day (most cafe spots don't allow computers). Mix of American and Italian style coffee options, also great food with some non-pastry breakfast options (though a bit on the pricier end)</div>
+      <div class="grid-like-info">
+        <span class="grid-subtitle">Katie R., Blaire K.</span>
+        <a href="https://www.tripadvisor.com/Restaurant_Review-g187895-d6600195-Reviews-Ditta_Artigianale-Florence_Tuscany.html" class="grid-button">Visit Website</a>
+        <div>
+          <button class="grid-like-button" id="grid-like-button11" onclick="handleLikeButtonClick(this)">Endorse</button>
+          <span class="grid-like-count" id="grid-like-count11">0</span>
+        </div>
+      </div> 
+    </div> 
+  
+    
+    <div class="grid-item">
+      <div>
+        <div class="grid-title">Buchetta del Vino</div>
+        <div class="grid-subtitle">Restaurant</div>
+      </div>
+      <div class="grid-description">Wine window in Florence with a convenient location, also can sit down inside for aperitivo!</div>
+      <div class="grid-like-info">
+        <span class="grid-subtitle">Katie R.</span>
+        <a href="https://florencewhatelse.it/en/2021/04/28/wine-windows-buchette-del-vino-curious-tiny-doors-florence/" class="grid-button">Visit Website</a>
+        <div>
+          <button class="grid-like-button" id="grid-like-button12" onclick="handleLikeButtonClick(this)">Endorse</button>
+          <span class="grid-like-count" id="grid-like-count12">0</span>
+        </div>
+      </div> 
+    </div> 
+  
+    <div class="grid-item">
+      <div>
+        <div class="grid-title">All'Antico Vinaio</div>
+        <div class="grid-subtitle">Restaurant</div>
+      </div>
+      <div class="grid-description">Best sandwich shop in florence, definitely worth the hype. Go earlier in the day (11ish) and preferably on a weekday to skip the line.</div>
+      <div class="grid-like-info">
+        <span class="grid-subtitle">Katie R., Bill W.</span>
+        <a href="https://www.tripadvisor.com/Restaurant_Review-g187895-d1102253-Reviews-All_Antico_Vinaio-Florence_Tuscany.html" class="grid-button">Visit Website</a>
+        <div>
+          <button class="grid-like-button" id="grid-like-button13" onclick="handleLikeButtonClick(this)">Endorse</button>
+          <span class="grid-like-count" id="grid-like-count13">0</span>
+        </div>
+      </div> 
+    </div> 
+  
+  
+    <div class="grid-item">
+      <div>
+        <div class="grid-title">Boboli Gardens</div>
+        <div class="grid-subtitle">Site</div>
+      </div>
+      <div class="grid-description">Gardens right across the river with views of the entire city.</div>
+      <div class="grid-like-info">
+        <span class="grid-subtitle">Bill W.</span>
+        <a href="https://www.uffizi.it/en/boboli-garden" class="grid-button">Visit Website</a>
+        <div>
+          <button class="grid-like-button" id="grid-like-button14" onclick="handleLikeButtonClick(this)">Endorse</button>
+          <span class="grid-like-count" id="grid-like-count14">0</span>
+        </div>
+      </div> 
+    </div> 
+  
+    <div class="grid-item">
+      <div>
+        <div class="grid-title">L'arte di dory</div>
+        <div class="grid-subtitle">Restaurant</div>
+      </div>
+      <div class="grid-description">The MOST AMAZING family-run restaurant in a local neighborhood of Florence. The entire family welcome you in, feeds you the best food, and gives you a glimpse into the life of a growing family in Italy. Truly the most wonderful experience with my friends, modest price, priceless laughter and joy--we couldn't stop going back!</div>
+      <div class="grid-like-info">
+        <span class="grid-subtitle">Rebecca R.</span>
+        <a href="https://www.tripadvisor.com/Restaurant_Review-g187895-d15010165-Reviews-L_Arte_di_Dori_cucina_casalinga_in_Oltrarno-Florence_Tuscany.html" class="grid-button">Visit Website</a>
+        <div>
+          <button class="grid-like-button" id="grid-like-button15" onclick="handleLikeButtonClick(this)">Endorse</button>
+          <span class="grid-like-count" id="grid-like-count15">0</span>
+        </div>
+      </div> 
+    </div> 
+  
+    <div class="grid-item">
+      <div>
+        <div class="grid-title">La Buchetta</div>
+        <div class="grid-subtitle">Restaurant</div>
+      </div>
+      <div class="grid-description">La Buchetta has THE best gnocchi I’ve ever had. The waiters are always super nice. Also definitely get their cheesecake, it comes hot & sizzling and is so so delicious.</div>
+      <div class="grid-like-info">
+        <span class="grid-subtitle">Lauren G.</span>
+        <a href="http://labuchetta.com/" class="grid-button">Visit Website</a>
+        <div>
+          <button class="grid-like-button" id="grid-like-button16" onclick="handleLikeButtonClick(this)">Endorse</button>
+          <span class="grid-like-count" id="grid-like-count16">0</span>
+        </div>
+      </div> 
+    </div> 
+  
+  
+    <div class="grid-item">
+      <div>
+        <div class="grid-title">Melaleuca bakery + bistrot</div>
+        <div class="grid-subtitle">Day Trip</div>
+      </div>
+      <div class="grid-description">The yummiest cinnamon rolls—bring it to go with a shot of espresso and enjoy it on the Arno on a sunny day :)) best in between class treat!!</div>
+      <div class="grid-like-info">
+        <span class="grid-subtitle">Grace L.</span>
+        <a href="https://www.tripadvisor.com/Restaurant_Review-g187895-d18901276-Reviews-Melaleuca-Florence_Tuscany.html" class="grid-button">Visit Website</a>
+        <div>
+          <button class="grid-like-button" id="grid-like-button17" onclick="handleLikeButtonClick(this)">Endorse</button>
+          <span class="grid-like-count" id="grid-like-count17">0</span>
+        </div>
+      </div> 
+    </div> 
+  
+  
+    <div class="grid-item">
+      <div>
+        <div class="grid-title">La Cité</div>
+        <div class="grid-subtitle">Restaurant</div>
+      </div>
+      <div class="grid-description">One of the best places in the city to work/study! Such a nice ambience with outlets and Wi-Fi (a rarity in Florence). Also, transitions into the perfect aperitivo place once you’re done studying (I’d recommend the Hugo Spritz)</div>
+      <div class="grid-like-info">
+        <span class="grid-subtitle">Grace L.</span>
+        <a href="https://www.tripadvisor.com/Restaurant_Review-g187895-d1237872-Reviews-Libreria_Cafe_La_Cite-Florence_Tuscany.html" class="grid-button">Visit Website</a>
+        <div>
+          <button class="grid-like-button" id="grid-like-button18" onclick="handleLikeButtonClick(this)">Endorse</button>
+          <span class="grid-like-count" id="grid-like-count18">0</span>
+        </div>
+      </div> 
+    </div> 
+  
+  
+    
+    <div class="grid-item">
+      <div>
+        <div class="grid-title">Pisa + Lucca</div>
+        <div class="grid-subtitle">Day Trip</div>
+      </div>
+      <div class="grid-description">Such an easy day trip! Both small cities, so doable to visit both in one day, enjoy the classic Leaning Tower of Pisa and walk old city walls in Lucca (p.s. the bread is actually salted here and there’s delicious seafood!)</div>
+      <div class="grid-like-info">
+        <span class="grid-subtitle">Grace L.</span>
+        <a href="https://www.ciaoflorence.it/it/page/82?gad=1&gclid=Cj0KCQjw7PCjBhDwARIsANo7CgllNitMJI9FitGpfY5e2qd8ZDQ-ZFiS-KO1IAuLu4I5TGJPkORy6AcaArFpEALw_wcB" class="grid-button">Visit Website</a>
+        <div>
+          <button class="grid-like-button" id="grid-like-button19" onclick="handleLikeButtonClick(this)">Endorse</button>
+          <span class="grid-like-count" id="grid-like-count19">0</span>
+        </div>
+      </div> 
+    </div> 
+  
+  
+    <div class="grid-item">
+      <div>
+        <div class="grid-title">Cascine Vintage Market</div>
+        <div class="grid-subtitle">Restaurant</div>
+      </div>
+      <div class="grid-description">Tuesday Mornings only in Parco delle Cascine</div>
+      <div class="grid-like-info">
+        <span class="grid-subtitle">Faith Z.</span>
+        <a href="https://www.visitflorence.com/what-to-do-in-florence/shopping/the-cascine-market.html" class="grid-button">Visit Website</a>
+        <div>
+          <button class="grid-like-button" id="grid-like-button20" onclick="handleLikeButtonClick(this)">Endorse</button>
+          <span class="grid-like-count" id="grid-like-count20">0</span>
+        </div>
+      </div> 
+    </div> 
+  
+      
+    <div class="grid-item">
+      <div>
+        <div class="grid-title">Forno Becagli</div>
+        <div class="grid-subtitle">Restaurant</div>
+      </div>
+      <div class="grid-description">Best bakery in Florence, only locals, super cheap and great variety</div>
+      <div class="grid-like-info">
+        <span class="grid-subtitle">Faith Z.</span>
+        <a href="https://www.tripadvisor.com/Restaurant_Review-g187895-d2514291-Reviews-Forno_Becagli_Borgognissanti-Florence_Tuscany.html" class="grid-button">Visit Website</a>
+        <div>
+          <button class="grid-like-button" id="grid-like-button21" onclick="handleLikeButtonClick(this)">Endorse</button>
+          <span class="grid-like-count" id="grid-like-count21">0</span>
+        </div>
+      </div> 
+    </div> 
+  
+  
+    <div class="grid-item">
+      <div>
+        <div class="grid-title">Il Santino Wine Bar</div>
+        <div class="grid-subtitle">Restaurant</div>
+      </div>
+      <div class="grid-description">Cutest little wine bar with great aperitivo</div>
+      <div class="grid-like-info">
+        <span class="grid-subtitle">Faith Z.</span>
+        <a href="http://ilsantobevitore.com/pdf/santo_subito.pdf" class="grid-button">Visit Website</a>
+        <div>
+          <button class="grid-like-button" id="grid-like-button22" onclick="handleLikeButtonClick(this)">Endorse</button>
+          <span class="grid-like-count" id="grid-like-count22">0</span>
+        </div>
+      </div> 
+    </div> 
+  
+  
+    
+    <div class="grid-item">
+      <div>
+        <div class="grid-title">Venice</div>
+        <div class="grid-subtitle">Day Trip</div>
+      </div>
+      <div class="grid-description">Lovely!</div>
+      <div class="grid-like-info">
+        <span class="grid-subtitle">Paige O.</span>
+        <a href="https://venicelover.com/" class="grid-button">Visit Website</a>
+        <div>
+          <button class="grid-like-button" id="grid-like-button23" onclick="handleLikeButtonClick(this)">Endorse</button>
+          <span class="grid-like-count" id="grid-like-count23">0</span>
+        </div>
+      </div> 
+    </div> 
+  
+  
+    <div class="grid-item">
+      <div>
+        <div class="grid-title">Ponte Vecchio</div>
+        <div class="grid-subtitle">Site</div>
+      </div>
+      <div class="grid-description">Famous bridge in Florence!</div>
+      <div class="grid-like-info">
+        <span class="grid-subtitle">Paige O.</span>
+        <a href="http://www.visitflorence.com/florence-monuments/ponte-vecchio.html" class="grid-button">Visit Website</a>
+        <div>
+          <button class="grid-like-button" id="grid-like-button24" onclick="handleLikeButtonClick(this)">Endorse</button>
+          <span class="grid-like-count" id="grid-like-count24">0</span>
+        </div>
+      </div> 
+    </div> 
+    
+    
+  
+    </div>
+  
+  
+  
